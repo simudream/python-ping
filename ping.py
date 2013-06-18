@@ -210,9 +210,11 @@ else:
 #=============================================================================#
 # ICMP parameters
 
-ICMP_ECHOREPLY  =    0 # Echo reply (per RFC792)
-ICMP_ECHO       =    8 # Echo request (per RFC792)
-ICMP_MAX_RECV   = 2048 # Max size of incoming buffer
+ICMP_ECHOREPLY        =    0 # Echo reply (per RFC792)
+ICMP_ECHO             =    8 # Echo request (per RFC792)
+ICMP_ECHO_IPV6        =  128 # Echo request (per RFC4443)
+ICMP_ECHO_IPV6_REPLY  =  129 # Echo request (per RFC4443)
+ICMP_MAX_RECV         = 2048 # Max size of incoming buffer
 
 MAX_SLEEP = 1000
 
@@ -276,28 +278,36 @@ def checksum(source_string):
     return answer
 
 #=============================================================================#
-def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet = False):
+def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet = False, ipv6=False):
     """
     Returns either the delay (in ms) or None on timeout.
     """
     delay = None
 
-    try: # One could use UDP here, but it's obscure
-        mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
-    except socket.error as e:
-        print("failed. (socket error: '%s')" % e.args[1])
-        raise # raise the original error
+    if ipv6:
+        try: # One could use UDP here, but it's obscure
+            mySocket = socket.socket(socket.AF_INET6, socket.SOCK_RAW, socket.getprotobyname("ipv6-icmp"))
+        except socket.error, e:
+            print("failed. (socket error: '%s')" % e.args[1])
+            raise # raise the original error
+    else:
+
+        try: # One could use UDP here, but it's obscure
+            mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
+        except socket.error, e:
+            print("failed. (socket error: '%s')" % e.args[1])
+            raise # raise the original error
 
     my_ID = os.getpid() & 0xFFFF
 
-    sentTime = send_one_ping(mySocket, destIP, my_ID, mySeqNumber, numDataBytes)
+    sentTime = send_one_ping(mySocket, destIP, my_ID, mySeqNumber, numDataBytes, ipv6)
     if sentTime == None:
         mySocket.close()
         return delay
 
     myStats.pktsSent += 1
 
-    recvTime, dataSize, iphSrcIP, icmpSeqNumber, iphTTL = receive_one_ping(mySocket, my_ID, timeout)
+    recvTime, dataSize, iphSrcIP, icmpSeqNumber, iphTTL = receive_one_ping(mySocket, my_ID, timeout, ipv6)
 
     mySocket.close()
 
@@ -320,7 +330,7 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
     return delay
 
 #=============================================================================#
-def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes):
+def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes, ipv6=False):
     """
     Send one ping to the given >destIP<.
     """
@@ -331,9 +341,14 @@ def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes):
     myChecksum = 0
 
     # Make a dummy heder with a 0 checksum.
-    header = struct.pack(
-        "!BBHHH", ICMP_ECHO, 0, myChecksum, myID, mySeqNumber
-    )
+    if ipv6:
+        header = struct.pack(
+            "!BbHHh", ICMP_ECHO_IPV6, 0, myChecksum, myID, mySeqNumber
+        )
+    else:
+        header = struct.pack(
+            "!BBHHH", ICMP_ECHO, 0, myChecksum, myID, mySeqNumber
+        )
 
     padBytes = []
     startVal = 0x42
@@ -356,9 +371,14 @@ def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes):
 
     # Now that we have the right checksum, we put that in. It's just easier
     # to make up a new header than to stuff it into the dummy.
-    header = struct.pack(
-        "!BBHHH", ICMP_ECHO, 0, myChecksum, myID, mySeqNumber
-    )
+    if ipv6:
+        header = struct.pack(
+            "!BbHHh", ICMP_ECHO_IPV6, 0, myChecksum, myID, mySeqNumber
+        )
+    else:
+        header = struct.pack(
+            "!BBHHH", ICMP_ECHO, 0, myChecksum, myID, mySeqNumber
+        )
 
     packet = header + data
 
@@ -366,14 +386,14 @@ def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes):
 
     try:
         mySocket.sendto(packet, (destIP, 1)) # Port number is irrelevant for ICMP
-    except socket.error as e:
+    except socket.error, e:
         print("General failure (%s)" % (e.args[1]))
         return
 
     return sendTime
 
 #=============================================================================#
-def receive_one_ping(mySocket, myID, timeout):
+def receive_one_ping(mySocket, myID, timeout, ipv6=False):
     """
     Receive the ping from the socket. Timeout = in ms
     """
@@ -397,7 +417,11 @@ def receive_one_ping(mySocket, myID, timeout):
             "!BBHHHBBHII", ipHeader
         )
 
-        icmpHeader = recPacket[20:28]
+        if ipv6:
+            icmpHeader = recPacket[0:8]
+        else:
+            icmpHeader = recPacket[20:28]
+
         icmpType, icmpCode, icmpChecksum, \
         icmpPacketID, icmpSeqNumber = struct.unpack(
             "!BBHHH", icmpHeader
@@ -445,7 +469,7 @@ def signal_handler(signum, frame):
 
 #=============================================================================#
 def verbose_ping(hostname, timeout = 3000, count = 3,
-                     numDataBytes = 64, path_finder = False):
+                     numDataBytes = 64, path_finder = False, ipv6=False):
     """
     Send >count< ping to >destIP< with the given >timeout< and display
     the result.
@@ -460,9 +484,13 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
     mySeqNumber = 0 # Starting value
 
     try:
-        destIP = socket.gethostbyname(hostname)
+        if ipv6:
+            info = socket.getaddrinfo(hostname, None)[0]
+            destIP = info[4][0]
+        else:
+            destIP = socket.gethostbyname(hostname)
         print("\nPYTHON PING %s (%s): %d data bytes" % (hostname, destIP, numDataBytes))
-    except socket.gaierror as e:
+    except socket.gaierror, e:
         print("\nPYTHON PING: Unknown host: %s (%s)" % (hostname, e.args[1]))
         print()
         return
@@ -470,7 +498,7 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
     myStats.thisIP = destIP
 
     for i in range(count):
-        delay = do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes)
+        delay = do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, ipv6)
 
         if delay == None:
             delay = 0
@@ -485,7 +513,7 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
 
 #=============================================================================#
 def quiet_ping(hostname, timeout = 3000, count = 3,
-                     numDataBytes = 64, path_finder = False):
+                     numDataBytes = 64, path_finder = False, ipv6=False):
     """
     Same as verbose_ping, but the results are returned as tuple
     """
@@ -493,8 +521,12 @@ def quiet_ping(hostname, timeout = 3000, count = 3,
     mySeqNumber = 0 # Starting value
 
     try:
-        destIP = socket.gethostbyname(hostname)
-    except socket.gaierror as e:
+        if ipv6:
+            info = socket.getaddrinfo(hostname, None)[0]
+            destIP = info[4][0]
+        else:
+            destIP = socket.gethostbyname(hostname)
+    except socket.gaierror, e:
         return False
 
     myStats.thisIP = destIP
@@ -505,12 +537,12 @@ def quiet_ping(hostname, timeout = 3000, count = 3,
     if path_finder:
         fakeStats = MyStats()
         do_one(fakeStats, destIP, hostname, timeout,
-                        mySeqNumber, numDataBytes, quiet=True)
+                        mySeqNumber, numDataBytes, quiet=True, ipv6=ipv6)
         time.sleep(0.5)
 
     for i in range(count):
         delay = do_one(myStats, destIP, hostname, timeout,
-                        mySeqNumber, numDataBytes, quiet=True)
+                        mySeqNumber, numDataBytes, quiet=True, ipv6=ipv6)
 
         if delay == None:
             delay = 0
