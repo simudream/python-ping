@@ -498,8 +498,7 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
     myStats.thisIP = destIP
 
     for i in range(count):
-        delay = do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, ipv6)
-
+        delay = do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, ipv6=ipv6)
         if delay == None:
             delay = 0
 
