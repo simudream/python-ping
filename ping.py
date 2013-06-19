@@ -314,8 +314,13 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
     if recvTime:
         delay = (recvTime-sentTime)*1000
         if not quiet:
+            if ipv6:
+                host_addr = hostname
+            else:
+                host_addr = socket.inet_ntop(struct.pack("!I", iphSrcIP))
+
             print("%d bytes from %s: icmp_seq=%d ttl=%d time=%d ms" % (
-                dataSize, socket.inet_ntoa(struct.pack("!I", iphSrcIP)), icmpSeqNumber, iphTTL, delay)
+                dataSize, host_addr, icmpSeqNumber, iphTTL, delay)
             )
         myStats.pktsRcvd += 1
         myStats.totTime += delay
