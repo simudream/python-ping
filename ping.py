@@ -44,6 +44,10 @@
     Revision history
     ~~~~~~~~~~~~~~~~
 
+    June 19, 2013
+    --------------
+    * Added support for IPv6. Taken from implementation of Lars Strand.
+
     March 19, 2013
     --------------
     * Fixing bug to prevent divide by 0 during run-time.
