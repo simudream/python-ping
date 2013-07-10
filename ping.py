@@ -321,7 +321,7 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
             if ipv6:
                 host_addr = hostname
             else:
-                host_addr = socket.inet_ntop(struct.pack("!I", iphSrcIP))
+                host_addr = socket.inet_ntop(socket.AF_INET, struct.pack("!I", iphSrcIP))
 
             print("%d bytes from %s: icmp_seq=%d ttl=%d time=%d ms" % (
                 dataSize, host_addr, icmpSeqNumber, iphTTL, delay)
