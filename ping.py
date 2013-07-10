@@ -574,21 +574,27 @@ def quiet_ping(hostname, timeout = 3000, count = 3,
 
 #=============================================================================#
 if __name__ == '__main__':
+    # FIXME: Add a real CLI
+    if len(sys.argv) == 1:
 
-    # These should work:
-    verbose_ping("8.8.8.8")
-    verbose_ping("heise.de")
-    verbose_ping("google.com")
+        # These should work:
+        verbose_ping("8.8.8.8")
+        verbose_ping("heise.de")
+        verbose_ping("google.com")
 
-    # Inconsistent on Windows w/ ActivePython (Python 3.2 resolves correctly
-    # to the local host, but 2.7 tries to resolve to the local *gateway*)
-    verbose_ping("localhost")
+        # Inconsistent on Windows w/ ActivePython (Python 3.2 resolves correctly
+        # to the local host, but 2.7 tries to resolve to the local *gateway*)
+        verbose_ping("localhost")
 
-    # Should fail with 'getaddrinfo failed':
-    verbose_ping("foobar_url.foobar")
+        # Should fail with 'getaddrinfo failed':
+        verbose_ping("foobar_url.foobar")
 
-    # Should fail (timeout), but it depends on the local network:
-    verbose_ping("192.168.255.254")
+        # Should fail (timeout), but it depends on the local network:
+        verbose_ping("192.168.255.254")
 
-    # Should fails with 'The requested address is not valid in its context':
-    verbose_ping("0.0.0.0")
+        # Should fails with 'The requested address is not valid in its context':
+        verbose_ping("0.0.0.0")
+    elif len(sys.argv) == 2:
+        verbose_ping(sys.argv[1])
+    else:
+        print "Error: call ./ping.py hostname"
