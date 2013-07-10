@@ -520,7 +520,7 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
     dump_stats(myStats)
     # 0 if we receive at least one packet
     # 1 if we don't receive any packets
-    sys.exit(not myStats.pktsRcvd)
+    return not myStats.pktsRcvd
 
 #=============================================================================#
 def quiet_ping(hostname, timeout = 3000, count = 3,
@@ -595,6 +595,7 @@ if __name__ == '__main__':
         # Should fails with 'The requested address is not valid in its context':
         verbose_ping("0.0.0.0")
     elif len(sys.argv) == 2:
-        verbose_ping(sys.argv[1])
+        retval = verbose_ping(sys.argv[1])
+        sys.exit(retval)
     else:
         print "Error: call ./ping.py hostname"
