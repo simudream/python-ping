@@ -518,6 +518,9 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
             time.sleep((MAX_SLEEP - delay)/1000)
 
     dump_stats(myStats)
+    # 0 if we receive at least one packet
+    # 1 if we don't receive any packets
+    sys.exit(not myStats.pktsRcvd)
 
 #=============================================================================#
 def quiet_ping(hostname, timeout = 3000, count = 3,
