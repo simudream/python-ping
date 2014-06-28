@@ -38,6 +38,14 @@ round-trip (ms)  min/avg/max = 55.468/55.795/56.232
 
 
 == Revision history ==
+June 19, 2013
+--------------
+* Added support for IPv6. Taken from implementation of Lars Strand.
+
+March 19, 2013
+--------------
+* Fixing bug to prevent divide by 0 during run-time.
+    
 January 26, 2012
 ----------------
 * Fixing BUG #4 - competability with python 2.x [tested with 2.7]
