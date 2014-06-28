@@ -41,8 +41,24 @@
     Bug fix by Andrejs Rozitis:
       -> http://github.com/rozitis/python-ping/
 
+    Bug fix by  Auke Willem Oosterhoff
+
     Revision history
     ~~~~~~~~~~~~~~~~
+
+    June 28, 2014
+    -------------
+    * Litlle modifications by Auke Willem Oosterhoff:
+     - Added support for simultaneous pings on multiple hosts.
+     https://bitbucket.org/OrangeTux/python-ping/commits/d4aa720662995a57cf18fa6b8ea689e9d11d26c7/raw/
+
+    * Faster and cleaner checksum creation
+      Based on frfra's patch
+      https://github.com/alexlouden/python-ping/commit/b9fc3acb2c36ccc895d1f7ba7336b951dc033ce9
+
+    * Changing 'except' calls to work with 2.x and 3.x
+      Based on pferate's patch
+      https://github.com/pferate/python_ping/commit/4e761ea99582ac1699c7965d149ce16e6b62f0ac
 
     June 19, 2013
     --------------
@@ -202,7 +218,12 @@
 """
 
 #=============================================================================#
-import os, sys, socket, struct, select, time, signal
+import os, sys, socket, struct, select, time, signal, array
+try:
+    from _thread import get_ident
+except ImportError:
+    def get_ident():
+	return 0
 
 if sys.platform == "win32":
     # On Windows, the best timer is time.clock()
@@ -242,41 +263,19 @@ def checksum(source_string):
     packed), but this works.
     Network data is big-endian, hosts are typically little-endian
     """
-    countTo = (int(len(source_string)/2))*2
-    sum = 0
-    count = 0
+    if len(source_string)%2:
+        source_string += "\x00"
+    converted = array.array("H", source_string)
+    if sys.byteorder == "big":
+        converted.bytewap()
+    val = sum(converted)
 
-    # Handle bytes in pairs (decoding as short ints)
-    loByte = 0
-    hiByte = 0
-    while count < countTo:
-        if (sys.byteorder == "little"):
-            loByte = source_string[count]
-            hiByte = source_string[count + 1]
-        else:
-            loByte = source_string[count + 1]
-            hiByte = source_string[count]
-        try:     # For Python3
-            sum = sum + (hiByte * 256 + loByte)
-        except:  # For Python2
-            sum = sum + (ord(hiByte) * 256 + ord(loByte))
-        count += 2
-
-    # Handle last byte if applicable (odd-number of bytes)
-    # Endianness should be irrelevant in this case
-    if countTo < len(source_string): # Check for odd length
-        loByte = source_string[len(source_string)-1]
-        try:      # For Python3
-            sum += loByte
-        except:   # For Python2
-            sum += ord(loByte)
-
-    sum &= 0xffffffff # Truncate sum to 32 bits (a variance from ping.c, which
+    val &= 0xffffffff # Truncate val to 32 bits (a variance from ping.c, which
                       # uses signed ints, but overflow is unlikely in ping)
 
-    sum = (sum >> 16) + (sum & 0xffff)    # Add high 16 bits to low 16 bits
-    sum += (sum >> 16)                    # Add carry from above (if any)
-    answer = ~sum & 0xffff                # Invert and truncate to 16 bits
+    val = (val >> 16) + (val & 0xffff)    # Add high 16 bits to low 16 bits
+    val += (val >> 16)                    # Add carry from above (if any)
+    answer = ~val & 0xffff                # Invert and truncate to 16 bits
     answer = socket.htons(answer)
 
     return answer
@@ -291,18 +290,25 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
     if ipv6:
         try: # One could use UDP here, but it's obscure
             mySocket = socket.socket(socket.AF_INET6, socket.SOCK_RAW, socket.getprotobyname("ipv6-icmp"))
-        except socket.error, e:
-            print("failed. (socket error: '%s')" % e.args[1])
+        except socket.error:
+            etype, evalue, etb = sys.exc_info()
+            print("failed. (socket error: '%s')" % evalue.args[1])
+            print('Note that python-ping uses RAW sockets'
+                    'and requiers root rights.')
             raise # raise the original error
     else:
 
         try: # One could use UDP here, but it's obscure
             mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
-        except socket.error, e:
-            print("failed. (socket error: '%s')" % e.args[1])
+        except socket.error:
+            etype, evalue, etb = sys.exc_info()
+            print("failed. (socket error: '%s')" % evalue.args[1])
+            print('Note that python-ping uses RAW sockets'
+                    'and requiers root rights.')
             raise # raise the original error
 
-    my_ID = os.getpid() & 0xFFFF
+    #my_ID = os.getpid() & 0xFFFF
+    my_ID = (os.getpid() ^ get_ident()) & 0xFFFF
 
     sentTime = send_one_ping(mySocket, destIP, my_ID, mySeqNumber, numDataBytes, ipv6)
     if sentTime == None:
@@ -395,8 +401,9 @@ def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes, ipv6=False)
 
     try:
         mySocket.sendto(packet, (destIP, 1)) # Port number is irrelevant for ICMP
-    except socket.error, e:
-        print("General failure (%s)" % (e.args[1]))
+    except socket.error:
+        etype, evalue, etb = sys.exc_info()
+        print("General failure (%s)" % (evalue.args[1]))
         return
 
     return sendTime
@@ -499,8 +506,9 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
         else:
             destIP = socket.gethostbyname(hostname)
         print("\nPYTHON PING %s (%s): %d data bytes" % (hostname, destIP, numDataBytes))
-    except socket.gaierror, e:
-        print("\nPYTHON PING: Unknown host: %s (%s)" % (hostname, e.args[1]))
+    except socket.gaierror:
+        etype, evalue, etb = sys.exc_info()
+        print("\nPYTHON PING: Unknown host: %s (%s)" % (hostname, evalue.args[1]))
         print()
         return
 
@@ -508,7 +516,7 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
 
     for i in range(count):
         delay = do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, ipv6=ipv6)
-        if delay == None:
+        if delay is None:
             delay = 0
 
         mySeqNumber += 1
@@ -537,7 +545,7 @@ def quiet_ping(hostname, timeout = 3000, count = 3,
             destIP = info[4][0]
         else:
             destIP = socket.gethostbyname(hostname)
-    except socket.gaierror, e:
+    except socket.gaierror:
         return False
 
     myStats.thisIP = destIP
@@ -555,7 +563,7 @@ def quiet_ping(hostname, timeout = 3000, count = 3,
         delay = do_one(myStats, destIP, hostname, timeout,
                         mySeqNumber, numDataBytes, quiet=True, ipv6=ipv6)
 
-        if delay == None:
+        if delay is None:
             delay = 0
 
         mySeqNumber += 1
