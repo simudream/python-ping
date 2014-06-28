@@ -48,6 +48,8 @@
 
     June 28, 2014
     -------------
+    * A bit closer to what PIP8 wants
+
     * Litlle modifications by Auke Willem Oosterhoff:
      - Added support for simultaneous pings on multiple hosts.
      https://bitbucket.org/OrangeTux/python-ping/commits/d4aa720662995a57cf18fa6b8ea689e9d11d26c7/raw/
@@ -218,12 +220,18 @@
 """
 
 #=============================================================================#
-import os, sys, socket, struct, select, time, signal, array
+import os
+import sys
+import time
+import array
+import socket
+import struct
+import select
+import signal
 try:
     from _thread import get_ident
 except ImportError:
-    def get_ident():
-	return 0
+    def get_ident(): return 0
 
 if sys.platform == "win32":
     # On Windows, the best timer is time.clock()
@@ -235,21 +243,21 @@ else:
 #=============================================================================#
 # ICMP parameters
 
-ICMP_ECHOREPLY        =    0 # Echo reply (per RFC792)
-ICMP_ECHO             =    8 # Echo request (per RFC792)
-ICMP_ECHO_IPV6        =  128 # Echo request (per RFC4443)
-ICMP_ECHO_IPV6_REPLY  =  129 # Echo request (per RFC4443)
-ICMP_MAX_RECV         = 2048 # Max size of incoming buffer
+ICMP_ECHOREPLY = 0		# Echo reply (per RFC792)
+ICMP_ECHO = 8			# Echo request (per RFC792)
+ICMP_ECHO_IPV6 = 128		# Echo request (per RFC4443)
+ICMP_ECHO_IPV6_REPLY = 129	# Echo request (per RFC4443)
+ICMP_MAX_RECV = 2048		# Max size of incoming buffer
 
 MAX_SLEEP = 1000
 
 class MyStats:
-    thisIP   = "0.0.0.0"
+    thisIP = "0.0.0.0"
     pktsSent = 0
     pktsRcvd = 0
-    minTime  = 999999999
-    maxTime  = 0
-    totTime  = 0
+    minTime = 999999999
+    maxTime = 0
+    totTime = 0
     avrgTime = 0
     fracLoss = 1.0
 
@@ -263,7 +271,7 @@ def checksum(source_string):
     packed), but this works.
     Network data is big-endian, hosts are typically little-endian
     """
-    if len(source_string)%2:
+    if (len(source_string) % 2):
         source_string += "\x00"
     converted = array.array("H", source_string)
     if sys.byteorder == "big":
@@ -375,7 +383,7 @@ def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes, ipv6=False)
         data = ((numDataBytes - 8) - bytes) * "Q"
         data = struct.pack("d", default_timer()) + data
     else:
-        for i in range(startVal, startVal + (numDataBytes-8)):
+        for i in range(startVal, startVal + (numDataBytes - 8)):
             padBytes += [(i & 0xff)]  # Keep chars in the 0-255 range
         #data = bytes(padBytes)
         data = bytearray(padBytes)
@@ -409,7 +417,7 @@ def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes, ipv6=False)
     return sendTime
 
 #=============================================================================#
-def receive_one_ping(mySocket, myID, timeout, ipv6=False):
+def receive_one_ping(mySocket, myID, timeout, ipv6 = False):
     """
     Receive the ping from the socket. Timeout = in ms
     """
@@ -446,7 +454,7 @@ def receive_one_ping(mySocket, myID, timeout, ipv6=False):
         if icmpPacketID == myID: # Our packet
             dataSize = len(recPacket) - 28
             #print (len(recPacket.encode()))
-            return timeReceived, (dataSize+8), iphSrcIP, icmpSeqNumber, iphTTL
+            return timeReceived, (dataSize + 8), iphSrcIP, icmpSeqNumber, iphTTL
 
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
@@ -515,7 +523,8 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
     myStats.thisIP = destIP
 
     for i in range(count):
-        delay = do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, ipv6=ipv6)
+        delay = do_one(myStats, destIP, hostname, timeout,
+                         mySeqNumber, numDataBytes, ipv6=ipv6)
         if delay is None:
             delay = 0
 
@@ -532,7 +541,7 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
 
 #=============================================================================#
 def quiet_ping(hostname, timeout = 3000, count = 3,
-                     numDataBytes = 64, path_finder = False, ipv6=False):
+                     numDataBytes = 64, path_finder = False, ipv6 = False):
     """
     Same as verbose_ping, but the results are returned as tuple
     """
@@ -570,10 +579,10 @@ def quiet_ping(hostname, timeout = 3000, count = 3,
 
         # Pause for the remainder of the MAX_SLEEP period (if applicable)
         if (MAX_SLEEP > delay):
-            time.sleep((MAX_SLEEP - delay)/1000)
+            time.sleep((MAX_SLEEP - delay) / 1000)
 
     if myStats.pktsSent > 0:
-        myStats.fracLoss = (myStats.pktsSent - myStats.pktsRcvd)/myStats.pktsSent
+        myStats.fracLoss = (myStats.pktsSent - myStats.pktsRcvd) / myStats.pktsSent
     if myStats.pktsRcvd > 0:
         myStats.avrgTime = myStats.totTime / myStats.pktsRcvd
 
@@ -606,4 +615,4 @@ if __name__ == '__main__':
         retval = verbose_ping(sys.argv[1])
         sys.exit(retval)
     else:
-        print "Error: call ./ping.py hostname"
+        print("Error: call ./ping.py hostname")
