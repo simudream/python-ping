@@ -5,7 +5,7 @@ Note that ICMP messages can only be sent from processes running as root
 
 Original Version from [[ftp://ftp.visi.com/users/mdc/ping.py|Matthew Dixon Cowles]]
   
-* copyleft 1989-2011 by the python-ping team, see [[https://github.com/jedie/python-ping/blob/master/AUTHORS|AUTHORS]] for more details.
+* copyleft 1989-2014 by the python-ping team, see [[https://github.com/jedie/python-ping/blob/master/AUTHORS|AUTHORS]] for more details.
 * license: GNU GPL v2, see [[https://github.com/jedie/python-ping/blob/master/LICENSE|LICENSE]] for more details.
 
 
@@ -34,10 +34,36 @@ round-trip (ms)  min/avg/max = 55.468/55.795/56.232
 
 == contribute ==
 
-[[http://help.github.com/fork-a-repo/|Fork this repo]] on [[https://github.com/jedie/python-ping/|GitHub]] and [[http://help.github.com/send-pull-requests/|send pull requests]]. Thank you.
+[[http://help.github.com/fork-a-repo/|Fork this repo]] on [[https://github.com/l4m3rx/python-ping/|GitHub]] and [[http://help.github.com/send-pull-requests/|send pull requests]]. Thank you.
 
 
 == Revision history ==
+June 30, 2014
+-------------
+* For problems/suggestions https://github.com/l4m3rx/python-ping/issues
+
+* Forgot to add stuff to this README :p
+
+June 29, 2014
+-------------
+* Merging parts of code from all the python-ping forks on github
+    * Litlle modifications by Auke Willem Oosterhoff:
+    - Added support for simultaneous pings on multiple hosts.
+    https://bitbucket.org/OrangeTux/python-ping/commits/d4aa720662995a57cf18fa6b8ea689e9d11d26c7/raw/
+
+    * Faster and cleaner checksum creation
+    Based on frfra's patch
+    https://github.com/alexlouden/python-ping/commit/b9fc3acb2c36ccc895d1f7ba7336b951dc033ce9
+
+    * Changing 'except' calls to work with 2.x and 3.x
+    Based on pferate's patch
+    https://github.com/pferate/python_ping/commit/4e761ea99582ac1699c7965d149ce16e6b62f0ac
+
+* Some small PIP8 stuff...
+
+* Merging stuff from/with https://github.com/estemendoza/python-ping
+  Both repos are in sync now.
+
 June 19, 2013
 --------------
 * Added support for IPv6. Taken from implementation of Lars Strand.
