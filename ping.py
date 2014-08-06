@@ -46,6 +46,12 @@
     Revision history
     ~~~~~~~~~~~~~~~~
 
+    August 6, 2014
+    --------------
+    * Fixing an bug introduced with last changes :S
+      - Python on Windows dosn't have socket.inet_ntop
+        Adding try/except to handle AttributeError.
+
     June 28, 2014
     -------------
     * A bit closer to what PIP8 wants
@@ -335,7 +341,11 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
             if ipv6:
                 host_addr = hostname
             else:
-                host_addr = socket.inet_ntop(socket.AF_INET, struct.pack("!I", iphSrcIP))
+                try:
+                    host_addr = socket.inet_ntop(socket.AF_INET, struct.pack("!I", iphSrcIP))
+                except AttributeError:
+                    # Python on windows dosn't have inet_ntop.
+                    host_addr = hostname
 
             print("%d bytes from %s: icmp_seq=%d ttl=%d time=%d ms" % (
                 dataSize, host_addr, icmpSeqNumber, iphTTL, delay)
