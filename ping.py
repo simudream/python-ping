@@ -46,6 +46,12 @@
     Revision history
     ~~~~~~~~~~~~~~~~
 
+    January 21, 2015
+    ----------------
+    * Set socket options to allow sending pings to broadcast address
+      - Based on Tom Wilkie's patch
+        https://github.com/tomwilkie/pyping/commit/7d017b03ee462fae72e2d0ff96a042bcba295564
+
     August 6, 2014
     --------------
     * Fixing an bug introduced with last changes :S
@@ -304,6 +310,7 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
     if ipv6:
         try: # One could use UDP here, but it's obscure
             mySocket = socket.socket(socket.AF_INET6, socket.SOCK_RAW, socket.getprotobyname("ipv6-icmp"))
+           mySocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         except socket.error:
             etype, evalue, etb = sys.exc_info()
             print("failed. (socket error: '%s')" % evalue.args[1])
@@ -314,6 +321,7 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
 
         try: # One could use UDP here, but it's obscure
             mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
+            mySocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         except socket.error:
             etype, evalue, etb = sys.exc_info()
             print("failed. (socket error: '%s')" % evalue.args[1])
