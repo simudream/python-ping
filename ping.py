@@ -310,10 +310,11 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
     if ipv6:
         try: # One could use UDP here, but it's obscure
             mySocket = socket.socket(socket.AF_INET6, socket.SOCK_RAW, socket.getprotobyname("ipv6-icmp"))
-           mySocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        except socket.error:
-            etype, evalue, etb = sys.exc_info()
-            print("failed. (socket error: '%s')" % evalue.args[1])
+            mySocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        #except socket.error
+        except OSError as e:
+            #etype, evalue, etb = sys.exc_info()
+            print("failed. (socket error: '%s')" % str(e))#evalue.args[1])
             print('Note that python-ping uses RAW sockets'
                     'and requiers root rights.')
             raise # raise the original error
@@ -322,11 +323,12 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
         try: # One could use UDP here, but it's obscure
             mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
             mySocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        except socket.error:
-            etype, evalue, etb = sys.exc_info()
-            print("failed. (socket error: '%s')" % evalue.args[1])
+        #except socket.error:
+        except OSError as e:
+            #etype, evalue, etb = sys.exc_info()
+            print("failed. (socket error: '%s')" % str(e))#evalue.args[1])
             print('Note that python-ping uses RAW sockets'
-                    'and requiers root rights.')
+                    'and requires root rights.')
             raise # raise the original error
 
     #my_ID = os.getpid() & 0xFFFF
@@ -427,9 +429,10 @@ def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes, ipv6=False)
 
     try:
         mySocket.sendto(packet, (destIP, 1)) # Port number is irrelevant for ICMP
-    except socket.error:
-        etype, evalue, etb = sys.exc_info()
-        print("General failure (%s)" % (evalue.args[1]))
+    #except socket.error:
+    except OSError as e:
+        #etype, evalue, etb = sys.exc_info()
+        print("General failure (%s)" % str(e))#(evalue.args[1]))
         return
 
     return sendTime
@@ -532,9 +535,9 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
         else:
             destIP = socket.gethostbyname(hostname)
         print("\nPYTHON PING %s (%s): %d data bytes" % (hostname, destIP, numDataBytes))
-    except socket.gaierror:
-        etype, evalue, etb = sys.exc_info()
-        print("\nPYTHON PING: Unknown host: %s (%s)" % (hostname, evalue.args[1]))
+    except socket.gaierror as e:
+        #etype, evalue, etb = sys.exc_info()
+        print("\nPYTHON PING: Unknown host: %s (%s)" % (hostname, str(e))) #(hostname, evalue.args[1]))
         print()
         return
 
