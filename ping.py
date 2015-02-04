@@ -46,6 +46,13 @@
     Revision history
     ~~~~~~~~~~~~~~~~
 
+    Febriary 4, 2015
+    ----------------
+    * Fix statistics dump on unexpected exit
+    * Fixing a bug where we match the ICMP request as respons
+      Fix based on samuel's work https://github.com/samuel/python-ping/commit/745c159dacce6afebb0f82cac8e9ed5bb2189491#diff-0ee81781c0132dc8f743df3a41b71918R128
+    * Merging simudream's patch to fix python3 error handeling.
+
     January 21, 2015
     ----------------
     * Set socket options to allow sending pings to broadcast address
@@ -472,7 +479,9 @@ def receive_one_ping(mySocket, myID, timeout, ipv6 = False):
             "!BBHHH", icmpHeader
         )
 
-        if icmpPacketID == myID: # Our packet
+        # Match only the packets we care about
+        if (icmpType != 8) and (icmpPacketID == myID):
+        #if icmpPacketID == myID: # Our packet
             dataSize = len(recPacket) - 28
             #print (len(recPacket.encode()))
             return timeReceived, (dataSize + 8), iphSrcIP, icmpSeqNumber, iphTTL
@@ -508,7 +517,7 @@ def signal_handler(signum, frame):
     """
     Handle exit via signals
     """
-    dump_stats()
+    dump_stats(myStats)
     print("\n(Terminated with signal %d)\n" % (signum))
     sys.exit(0)
 
