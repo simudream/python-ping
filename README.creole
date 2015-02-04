@@ -39,6 +39,14 @@ round-trip (ms)  min/avg/max = 55.468/55.795/56.232
 
 == Revision history ==
 
+February 4, 2015
+----------------
+ * Fix statistics dump on unexpected exit
+ * Fixing a bug where we match the ICMP request as respons
+	- Fix based on samuel's work https://github.com/samuel/python-ping/commit/745c159dacce6afebb0f82cac8e9ed5bb2189491#diff-0ee81781c0132dc8f743df3a41b71918R128
+ * Merging simudream's patch to fix python3 error handeling.
+
+
 January 21, 2015
 ----------------
 * Set socket options to allow sending pings to broadcast address
